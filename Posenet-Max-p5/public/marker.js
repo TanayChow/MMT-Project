@@ -13,8 +13,8 @@ show() {
         var vec = this.history[i];
         ellipse(vec.x,vec.y, 20,20);
     }*/
-    fill(255,0,0);
-    ellipse(this.x,this.y, 20,20);
+    fill(0,255,0);
+    ellipse(this.x,this.y, 10,10);
 }
 
 update(x,y) {

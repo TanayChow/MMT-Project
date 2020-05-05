@@ -11,6 +11,7 @@ function newConnection(socket) {
 
     //socket.on('mouse', mouseMessage);
     socket.on('pose', poseData);
+
     function mouseMessage(data) {
         console.log("mouseData - ", data.x, data.y,data.mouseIsPressed);
        // socket.broadcast.emit('mouse', data);
@@ -19,6 +20,19 @@ function newConnection(socket) {
     function poseData(data) {
         maxAPI.outlet(JSON.parse(data));
     }
+
+    maxAPI.addHandler("send1", (...args) => {
+        console.log(args);
+        socket.emit('counter', {
+            address: "/max/midi",
+            args: [
+                {
+                    type: "i",
+                    value: args[0]
+                }
+            ]
+        });
+    });
 
 }
 
