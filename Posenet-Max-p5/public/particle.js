@@ -1,13 +1,13 @@
 class Particle {
 pos;
 vel;
-r;
-mr;
+r; // distance radius
+mr; // inner radius
 speed = 0.1;
 max = 5;
 color
 constructor(pos, r, mr, color) {
-    console.log("here", pos);
+    // console.log("here", pos);
     this.pos = createVector(pos.x, pos.y);
     this.r = r;
     this.mr = mr;
@@ -34,15 +34,17 @@ update(pArray, index, movLeft, movRight) {
           
     noStroke();
     fill(this.color, 100);
-    ellipse(this.pos.x,this.pos.y,5,5);
+    ellipse(this.pos.x,this.pos.y,this.mr,this.mr);
     this.drawLinesToNeighbors(pArray, index, movLeft, movRight);
           
     noStroke();
 }
 
-updateRadius() {
-    fill(this.color);
-    ellipse(this.pos.x,this.pos.y,10,10);
+updateRadius(rad) {
+    //fill(this.color);
+    this.pos.x += random(-rad, rad);
+    this.pos.y += random(-rad, rad);
+    //ellipse(this.pos.x,this.pos.y,rad,rad);
 }
 
  drawLinesToNeighbors(pArray, index, movLeft, movRight) {
@@ -69,9 +71,9 @@ updateRadius() {
         stroke(map(distRight, 0, this.r, 255, 0));
         strokeWeight(map(distRight, 0, this.r, 3, 0));
         line(this.pos.x, this.pos.y, movRight.x, movRight.y);
-        /*var force = map(dist, 0, this.r, 4, 0);
-        this.vel.x += force * cos(ang);
-        this.vel.y += force * sin(ang);*/
+        var force = map(dist, 0, this.r, 4, 0);
+        //this.vel.x += force * cos(ang);
+        //this.vel.y += force * sin(ang);
       }
       if(distLeft < this.r) {
         stroke(map(distLeft, 0, this.r, 255, 0));

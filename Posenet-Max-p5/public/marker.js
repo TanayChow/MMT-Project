@@ -7,12 +7,6 @@ constructor() {
 }
 
 show() {
-    /*for(var i=0;i<this.history.length;i++){
-        console.log(this.history.length);
-        fill(128,128,128);
-        var vec = this.history[i];
-        ellipse(vec.x,vec.y, 20,20);
-    }*/
     fill(0,255,0);
     ellipse(this.x,this.y, 10,10);
 }
@@ -29,5 +23,10 @@ store() {
     if(this.history.length > 25) {
         this.history.splice(0,1);
     }
+}
+
+clear() {
+    this.x = 0;
+    this.y = 0;
 }
 }

@@ -11,6 +11,8 @@ function newConnection(socket) {
 
     //socket.on('mouse', mouseMessage);
     socket.on('pose', poseData);
+    //socket.on('mouse', mouseMessage);
+    socket.on('synth', synthData);
 
     function mouseMessage(data) {
         console.log("mouseData - ", data.x, data.y,data.mouseIsPressed);
@@ -20,6 +22,11 @@ function newConnection(socket) {
     function poseData(data) {
         maxAPI.outlet(JSON.parse(data));
     }
+
+    function synthData(data) {
+        maxAPI.outlet(data);
+    }
+
 
     maxAPI.addHandler("send1", (...args) => {
         console.log(args);
