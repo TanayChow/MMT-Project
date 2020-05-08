@@ -1,3 +1,4 @@
+/* Class for Particle */
 class Particle {
 pos;
 vel;
@@ -7,7 +8,7 @@ speed = 0.1;
 max = 5;
 color
 constructor(pos, r, mr, color) {
-    // console.log("here", pos);
+    // Initialize the particle
     this.pos = createVector(pos.x, pos.y);
     this.r = r;
     this.mr = mr;
@@ -16,6 +17,7 @@ constructor(pos, r, mr, color) {
 }
 
 update(pArray, index, movLeft, movRight) {
+    // update the position of the particle
     this.pos.add(this.vel);
     if(this.pos.x < -10) {
         this.pos.x = width;
@@ -40,30 +42,8 @@ update(pArray, index, movLeft, movRight) {
     noStroke();
 }
 
-updateRadius(rad) {
-    //fill(this.color);
-    this.pos.x += random(-rad, rad);
-    this.pos.y += random(-rad, rad);
-    //ellipse(this.pos.x,this.pos.y,rad,rad);
-}
-
  drawLinesToNeighbors(pArray, index, movLeft, movRight) {
-    /*var h = map(this.pos.x, 0, width, 0, 255);
-    for(let j = index + 1; j < pArray.length; j ++) {
-        var ang = atan2(this.pos.y - pArray[j].pos.y, this.pos.x - pArray[j].pos.x);
-        var dist = this.pos.dist(pArray[j].pos);
-        if(dist < this.r) {
-          //stroke(map(dist, 0, this.r, 255, 0));
-          //strokeWeight(map(dist, 0, this.r, 3, 0));
-          stroke(255);
-          line(this.pos.x, this.pos.y, pArray[j].pos.x, pArray[j].pos.y);
-          
-          var force = map(dist, 0, this.r, 4, 0);
-          this.vel.x += force * cos(ang);
-          this.vel.y += force * sin(ang);
-        }
-      }*/
-
+     // calculate the distance to the neighbors and draw lines to ones falling in the radius
      var ang = atan2(this.pos.y - movRight.y, this.pos.x - movRight.x);
      var distRight = this.pos.dist(movRight);
      var distLeft = this.pos.dist(movLeft);
@@ -71,17 +51,11 @@ updateRadius(rad) {
         stroke(map(distRight, 0, this.r, 255, 0));
         strokeWeight(map(distRight, 0, this.r, 3, 0));
         line(this.pos.x, this.pos.y, movRight.x, movRight.y);
-        var force = map(dist, 0, this.r, 4, 0);
-        //this.vel.x += force * cos(ang);
-        //this.vel.y += force * sin(ang);
       }
       if(distLeft < this.r) {
         stroke(map(distLeft, 0, this.r, 255, 0));
         strokeWeight(map(distLeft, 0, this.r, 3, 0));
         line(this.pos.x, this.pos.y, movLeft.x, movLeft.y);
-        /*var force = map(dist, 0, this.r, 4, 0);
-        this.vel.x += force * cos(ang);
-        this.vel.y += force * sin(ang);*/
       }
 
 }

@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 39.0, 79.0, 1339.0, 737.0 ],
+		"rect" : [ 39.0, 79.0, 1089.0, 737.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -82,8 +82,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "", "" ],
-					"patching_rect" : [ 66.0, 274.0, 58.0, 22.0 ],
-					"text" : "route dict"
+					"patching_rect" : [ 66.0, 274.0, 91.0, 22.0 ],
+					"text" : "route dictionary"
 				}
 
 			}
@@ -424,8 +424,6 @@
 					"saved_object_attributes" : 					{
 						"autostart" : 1,
 						"defer" : 0,
-						"node_bin_path" : "",
-						"npm_bin_path" : "",
 						"watch" : 1
 					}
 ,
@@ -532,7 +530,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 34.0, 79.0, 1372.0, 807.0 ],
+						"rect" : [ 34.0, 79.0, 1372.0, 787.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,
@@ -1941,16 +1939,16 @@
 											}
 , 											{
 												"name" : "body-1",
-												"default" : 												{
-													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-													"fontsize" : [ 12.0 ],
-													"fontname" : [ "Source Code Pro" ]
-												}
-,
 												"comment" : 												{
 													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
 													"fontsize" : [ 12.0 ],
 													"fontname" : [ "Avenir Book" ]
+												}
+,
+												"default" : 												{
+													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+													"fontsize" : [ 12.0 ],
+													"fontname" : [ "Source Code Pro" ]
 												}
 ,
 												"parentstyle" : "",
@@ -1968,16 +1966,16 @@
 											}
 , 											{
 												"name" : "comment",
-												"default" : 												{
-													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-													"fontsize" : [ 10.0 ],
-													"fontname" : [ "Source Code Pro" ]
-												}
-,
 												"comment" : 												{
 													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
 													"fontsize" : [ 10.0 ],
 													"fontname" : [ "Avenir Book" ]
+												}
+,
+												"default" : 												{
+													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+													"fontsize" : [ 10.0 ],
+													"fontname" : [ "Source Code Pro" ]
 												}
 ,
 												"parentstyle" : "",
@@ -1987,9 +1985,9 @@
 												"name" : "heading",
 												"default" : 												{
 													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-													"fontface" : [ 0 ],
 													"fontsize" : [ 16.0 ],
-													"fontname" : [ "Source Code Pro" ]
+													"fontname" : [ "Source Code Pro" ],
+													"fontface" : [ 0 ]
 												}
 ,
 												"parentstyle" : "",
@@ -1999,9 +1997,9 @@
 												"name" : "heading-1",
 												"default" : 												{
 													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-													"fontface" : [ 0 ],
 													"fontsize" : [ 16.0 ],
-													"fontname" : [ "Avenir Book" ]
+													"fontname" : [ "Avenir Book" ],
+													"fontface" : [ 0 ]
 												}
 ,
 												"parentstyle" : "",
@@ -2011,9 +2009,9 @@
 												"name" : "heading-1-1",
 												"default" : 												{
 													"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-													"fontface" : [ 0 ],
 													"fontsize" : [ 16.0 ],
-													"fontname" : [ "Source Code Pro" ]
+													"fontname" : [ "Source Code Pro" ],
+													"fontface" : [ 0 ]
 												}
 ,
 												"parentstyle" : "",
@@ -2031,8 +2029,8 @@
 , 											{
 												"name" : "newobjYellow-1",
 												"default" : 												{
-													"fontsize" : [ 12.059008 ],
-													"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ]
+													"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ],
+													"fontsize" : [ 12.059008 ]
 												}
 ,
 												"parentstyle" : "",
@@ -2334,16 +2332,16 @@
  ],
 						"styles" : [ 							{
 								"name" : "body",
-								"default" : 								{
-									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontsize" : [ 12.0 ],
-									"fontname" : [ "Source Code Pro" ]
-								}
-,
 								"comment" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
 									"fontsize" : [ 12.0 ],
 									"fontname" : [ "Avenir Book" ]
+								}
+,
+								"default" : 								{
+									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+									"fontsize" : [ 12.0 ],
+									"fontname" : [ "Source Code Pro" ]
 								}
 ,
 								"parentstyle" : "",
@@ -2361,16 +2359,16 @@
 							}
 , 							{
 								"name" : "body-1-1",
-								"default" : 								{
-									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontsize" : [ 12.0 ],
-									"fontname" : [ "Source Code Pro" ]
-								}
-,
 								"comment" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
 									"fontsize" : [ 12.0 ],
 									"fontname" : [ "Avenir Book" ]
+								}
+,
+								"default" : 								{
+									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+									"fontsize" : [ 12.0 ],
+									"fontname" : [ "Source Code Pro" ]
 								}
 ,
 								"parentstyle" : "",
@@ -2388,16 +2386,16 @@
 							}
 , 							{
 								"name" : "comment",
-								"default" : 								{
-									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontsize" : [ 10.0 ],
-									"fontname" : [ "Source Code Pro" ]
-								}
-,
 								"comment" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
 									"fontsize" : [ 10.0 ],
 									"fontname" : [ "Avenir Book" ]
+								}
+,
+								"default" : 								{
+									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+									"fontsize" : [ 10.0 ],
+									"fontname" : [ "Source Code Pro" ]
 								}
 ,
 								"parentstyle" : "",
@@ -2407,9 +2405,9 @@
 								"name" : "heading",
 								"default" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontface" : [ 0 ],
 									"fontsize" : [ 16.0 ],
-									"fontname" : [ "Avenir Book" ]
+									"fontname" : [ "Avenir Book" ],
+									"fontface" : [ 0 ]
 								}
 ,
 								"parentstyle" : "",
@@ -2419,9 +2417,9 @@
 								"name" : "heading-1",
 								"default" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontface" : [ 0 ],
 									"fontsize" : [ 16.0 ],
-									"fontname" : [ "Source Code Pro" ]
+									"fontname" : [ "Source Code Pro" ],
+									"fontface" : [ 0 ]
 								}
 ,
 								"parentstyle" : "",
@@ -2431,9 +2429,9 @@
 								"name" : "heading-1-1",
 								"default" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontface" : [ 0 ],
 									"fontsize" : [ 16.0 ],
-									"fontname" : [ "Avenir Book" ]
+									"fontname" : [ "Avenir Book" ],
+									"fontface" : [ 0 ]
 								}
 ,
 								"parentstyle" : "",
@@ -2443,9 +2441,9 @@
 								"name" : "heading-2",
 								"default" : 								{
 									"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"fontface" : [ 0 ],
 									"fontsize" : [ 16.0 ],
-									"fontname" : [ "Source Code Pro" ]
+									"fontname" : [ "Source Code Pro" ],
+									"fontface" : [ 0 ]
 								}
 ,
 								"parentstyle" : "",
@@ -2463,8 +2461,8 @@
 , 							{
 								"name" : "newobjYellow-1",
 								"default" : 								{
-									"fontsize" : [ 12.059008 ],
-									"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ]
+									"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ],
+									"fontsize" : [ 12.059008 ]
 								}
 ,
 								"parentstyle" : "",
@@ -2726,7 +2724,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-12", 0 ],
-					"midpoints" : [ 114.5, 325.5, 24.5, 325.5 ],
+					"midpoints" : [ 147.5, 325.5, 24.5, 325.5 ],
 					"source" : [ "obj-36", 1 ]
 				}
 

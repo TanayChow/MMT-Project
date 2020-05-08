@@ -1,3 +1,4 @@
+/* SERVER CODE - Started from MAX patcher in via [node.script] object */
 var express = require("express");
 var app = express();
 var server = app.listen(3000);
@@ -9,16 +10,10 @@ io.sockets.on('connection', newConnection);
 function newConnection(socket) {
     console.log("New connection @ socket - " , socket.id);
 
-    //socket.on('mouse', mouseMessage);
     socket.on('pose', poseData);
-    //socket.on('mouse', mouseMessage);
     socket.on('synth', synthData);
 
-    function mouseMessage(data) {
-        console.log("mouseData - ", data.x, data.y,data.mouseIsPressed);
-       // socket.broadcast.emit('mouse', data);
-    }
-
+    /* send data to MAX via max-api */
     function poseData(data) {
         maxAPI.outlet(JSON.parse(data));
     }
@@ -27,7 +22,7 @@ function newConnection(socket) {
         maxAPI.outlet(data);
     }
 
-
+    // Recieve messages from MAX via max-api
     maxAPI.addHandler("send1", (...args) => {
         console.log(args);
         socket.emit('counter', {
