@@ -38,6 +38,8 @@ var fft_synthA;
 var fft_synthB;
 var fft_perc;
 var peakDetect;
+var isModelLoaded = false;
+var vel;
 
 
 function preload() {
@@ -52,7 +54,7 @@ function setup() {
   let cnv = createCanvas(1280, 720);
   cnv.position(150,0);
   angleMode(DEGREES);
-  for(var i=0; i < 100; i++) {
+  for(var i=0; i < 5; i++) {
     particles.push(new Particle(createVector(random(width), random(height)),100,random(8), color(random(255), random(255),random(255)))); 
   }
   /* Initialize all sound property objects*/
@@ -108,14 +110,42 @@ function intializePosenet() {
   
   //video = createCapture(VIDEO);
   video.hide();
+  /* PoseNet initialization
+  architecture - Can be either MobileNetV1 or ResNet50.
+  
+  outputStride - Can be one of 8, 16, 32 (Stride 16, 32 are supported for the ResNet architecture and stride 8, 16, 32 
+  are supported for the MobileNetV1 architecture). It specifies the output stride of the PoseNet model. 
+  The smaller the value, the larger the output resolution, and more accurate the model at the cost of speed. 
+  Set this to a larger value to increase speed at the cost of accuracy.
+
+  inputResolution - A number or an Object of type {width: number, height: number}. Defaults to 257. 
+  It specifies the size the image is resized and padded to before it is fed into the PoseNet model. 
+  The larger the value, the more accurate the model at the cost of speed. Set this to a smaller value 
+  to increase speed at the cost of accuracy. If a number is provided, the image will be resized and padded 
+  to be a square with the same width and height. If width and height are provided, the image will be resized 
+  and padded to the specified width and height.
+
+  multiplier - Can be one of 1.0, 0.75, or 0.50 (The value is used only by the MobileNetV1 architecture and not by the ResNet 
+  architecture). It is the float multiplier for the depth (number of channels) for all convolution ops. 
+  The larger the value, the larger the size of the layers, and more accurate the model at the cost of speed. 
+  Set this to a smaller value to increase speed at the cost of accuracy.
+
+  quantBytes - This argument controls the bytes used for weight quantization. The available options are:
+
+  4. 4 bytes per float (no quantization). Leads to highest accuracy and original model size (~90MB).
+  2. 2 bytes per float. Leads to slightly lower accuracy and 2x model size reduction (~45MB).
+  1. 1 byte per float. Leads to lower accuracy and 4x model size reduction (~22MB).
+
+  modelUrl - An optional string that specifies custom url of the model. This is useful for local development or countries that don't have access to the model hosted on GCP.
+  */
   poseNet = ml5.poseNet(video,{
     architecture: 'MobileNetV1',
     outputStride: 16,
     //inputResolution: { width: 200, height: 480 }, defaults to 257
     multiplier: .75,
-    quantBytes: 2,
-    detectionType: 'single'
-
+    quantBytes: 4,
+    detectionType: 'single',
+    /*flipHorizontal: false*/
   }, modelLoaded);
   poseNet.on('pose', getPoses);
 }
@@ -123,27 +153,29 @@ function intializePosenet() {
 function intializeUI() {
   /* Initializing all the UI elements here */
 
-  checkBoxDrum = createCheckbox("Drum", true);
+  /*checkBoxDrum = createCheckbox("Drum", false);
   checkBoxDrum.changed(checkBoxDrumChanged);
   sliderDrum = createSlider(0,1,0.5,0.01);
-  checkBoxPerc = createCheckbox("Percussion", true);
+  checkBoxPerc = createCheckbox("Percussion", false);
   checkBoxPerc.changed(checkBoxPercChanged);
   sliderPerc = createSlider(0,1,0.5,0.01);
-  checkBoxAmbientSynth = createCheckbox("Ambient Synth", true);
+  checkBoxAmbientSynth = createCheckbox("Ambient Synth", false);
   checkBoxAmbientSynth.changed(checkBoxAmbientSynthChanged);
   sliderSynthA = createSlider(0,1,0.5,0.01);
-  checkBoxLeadSynth = createCheckbox("Lead Synth", true);
+  checkBoxLeadSynth = createCheckbox("Lead Synth", false);
   checkBoxLeadSynth.changed(checkBoxLeadSynthChanged);
-  sliderSynthB = createSlider(0,1,0.5,0.01);
+  sliderSynthB = createSlider(0,1,0.5,0.01);*/
   checkBoxPose = createCheckbox("Enable Pose Detection", true );
   checkBoxPose.changed(checkBoxPoseChanged);
   checkBoxPose.position(150,730);
   checkBoxSynthToggle = createCheckbox("Toggle FM Synth", false);
   checkBoxSynthToggle.changed(checkBoxFMSynthToggle);
 
-  checkBoxParticleAnim = createCheckbox("Show Particles", true);
-  checkboxFFTAnim = createCheckbox("Graphic EQ", true);
-  checkboxAmplitudeAnim = createCheckbox("Volume Graph", true);
+  /* UI Animation Checkboxes */
+  checkBoxParticleAnim = createCheckbox("Show Particles", false);
+  /*checkboxFFTAnim = createCheckbox("Graphic EQ", false);
+  checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);*/
+
 }
 
 function initializeSound() {
@@ -224,6 +256,7 @@ function clearMarkers() {
 // Callback for posenet model load complete
 function modelLoaded() {
   console.log("MODEL LOADED");
+  isModelLoaded = true;
 }
 
 // callback from posenet once pose data is received
@@ -233,7 +266,8 @@ function getPoses(poses) {
     for (let i = 0; i < pose.keypoints.length; i++) {
       let x = pose.keypoints[i].position.x;
       let y = pose.keypoints[i].position.y;
-      markers[i].update(x,y);
+      let weight = 1;
+      markers[i].update(x, y, weight);
     }
   }
 }
@@ -250,15 +284,77 @@ function drawSkeleton() {
   filter(GRAY); 
   */
 
-  for (let i = 0; i < markers.length; i++) {
+  /*for (let i = 0; i < markers.length; i++) {
     markers[i].show();
+  }*/
+  if(pose.leftEar.confidence > 0.5 && pose.rightEar.confidence > 0.5 && pose.leftShoulder.confidence > 0.5 
+    && pose.rightShoulder.confidence > 0.5)
+  {
+    drawLines();
   }
-
   pop();
 }
 
+function drawLines() {
+  stroke(255,0,0);
+  line(pose.leftEar.x, pose.leftEar.y, pose.rightEar.x, pose.rightEar.y);
+  line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
+  line(pose.leftEar.x, pose.leftEar.y, pose.rightEar.x, pose.rightEar.y);
+  line(pose.leftShoulder.x, pose.leftShoulder.y, pose.rightShoulder.x, pose.rightShoulder.y);
+  //line(pose.leftHip.x, pose.leftHip.y, pose.rightHip.x, pose.rightHip.y);
+  //line(pose.leftKnee.x, pose.leftKnee.y, pose.rightKnee.x, pose.rightKnee.y);
+  drawGravityLines(pose.leftShoulder, pose.rightShoulder);
+  drawGravityLines(pose.leftEar, pose.rightEar);
+  drawCopLines(pose.leftKnee, pose.rightKnee);
+
+  drawBalancePoints(pose.leftEar, pose.rightEar, 'head');
+  //drawBalancePoints(pose.leftShoulder, pose.rightShoulder);
+  //drawBalancePoints(pose.leftWrist, pose.rightWrist);
+}
+function drawGravityLines(left, right) {
+  stroke(255,0,0);
+  var midX = (left.x + right.x) / 2;
+  var midY = (left.y + right.y) /2;
+  line(midX, midY , midX, height);
+}
+
+function drawCopLines(left, right) {
+  stroke(0,255,0);
+  line(left.x, left.y, left.x, height );
+  line(right.x, right.y, right.x, height );
+}
+
+function drawBalancePoints(left,right, position) {
+  var midpointx = (left.x + right.x) / 2;
+  var midpointy = (left.y + right.y) / 2; 
+  var cVec = createVector(midpointx, midpointy);
+  var aVec = createVector(right.x, right.y);
+  var m = (right.y - left.y) / (right.x - left.x);
+  var at = degrees(atan(radians(m)));
+  console.log(at);
+  var ratio = cVec.dist(aVec)*sin(at) / 5;
+  noStroke();
+  fill(255);
+  //console.log(sin(at) + " " + cos(at) + " " + ratio);
+  var balance = {
+    angle: at,
+    position: position
+  };
+  
+  socket.emit('balance', JSON.stringify(balance));
+  for(var i=0; i < 5 ;i++) {
+
+    cVec.x+=ratio*cos(at);
+    cVec.y+=ratio*sin(at);
+    
+    //this.shoulderCenterVec.add(vel);
+    ellipse(cVec.x, cVec.y, 10,10);
+  }
+}
 // Drawing the reference grid
 function drawGrid() {
+
+
   fill(255);
   stroke(255);
   line(420,0,420,900);
@@ -270,7 +366,13 @@ function drawGrid() {
   ellipse(width/2, height/2, height, height);
   fill(255);
   stroke(0);
-  text("FPS: " + frameRate().toFixed(2), 10, height - 10);
+  textSize(10);
+
+  if(!isModelLoaded) {
+    text('INTIALIZING', 0, 10);
+  } else {
+    text("READY ! FPS: " + frameRate().toFixed(2), 0, 10);
+  }
 }
 
 function fftAnim() {
@@ -415,32 +517,35 @@ function playSounds() {
     }
   }
 }
+function drawAnimation() {
+    if(checkboxAmplitudeAnim && checkboxAmplitudeAnim.checked()) {
+      amplitudeAnim();
+    }
+    if(checkboxFFTAnim && checkboxFFTAnim.checked()) {
+      fftAnim();
+    }
+    if(checkBoxParticleAnim && checkBoxParticleAnim.checked()) {
+      drawParticles();
+    }
+  }
 
 // Main draw() function loop
 function draw() {
   background(0);
   drawGrid();
 
-  if(checkboxAmplitudeAnim.checked()) {
-    amplitudeAnim();
-  }
-  if(checkboxFFTAnim.checked()) {
-    fftAnim();
-  }
+   drawAnimation();
   
   // sets the volume of the audio loops
   setVolume();
   
   if(pose) {
     // Process only if pose data is available
-    //console.log(pose);
-    socket.emit('pose', JSON.stringify(pose));
-
-    if(checkBoxParticleAnim.checked()) {
-      drawParticles();
-    }
+    // console.log(pose);
     
-    playSounds();
+    //socket.emit('pose', JSON.stringify(pose));
+  
+    // playSounds();
 
     if(checkBoxPose) {
       drawSkeleton();

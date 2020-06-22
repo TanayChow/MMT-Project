@@ -3,19 +3,26 @@ class marker {
 history = [];
 x;
 y;
+weight;
     
 constructor() {
 }
 
 show() {
+    noStroke();
     fill(0,255,0);
-    ellipse(this.x,this.y, 10,10);
+    ellipse(this.x,this.y, 10*weight,10*weight);
 }
 
-update(x,y) {
+update(x, y, weight) {
     this.x = x;
     this.y = y;
+    this.weight = weight;
     this.store();
+}
+
+updateWeight(weight) {
+    this.weight = weight;
 }
 
 store() {
