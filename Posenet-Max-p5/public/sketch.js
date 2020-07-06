@@ -179,7 +179,7 @@ function initializeUI() {
   checkBoxPose.position(150,730);
 
   /* Creating the synth toggle button and applying styling */
-  synthToggleButton = createButton("FM SYNTH");
+  synthToggleButton = createButton("PERCOLATE");
   synthToggleButton.style('background-color: #4CAF50; border-radius: 8px;color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block; font-size: 16px');
   synthToggleButton.position(150,20);
   synthToggleButton.mousePressed(synthButtonPressed);
@@ -343,14 +343,16 @@ function drawSkeleton() {
 /* Draw function for the displaying graphics on canvas */
 function drawLines() {
   // console.log('drawLines');
-  stroke(255,0,0);
-  strokeWeight(2);
-  
-  line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
+
   var centroid = getCentroid();
-  line(width/2, height, centroid[0], centroid[1]);
+  fill(28,128,128);
   ellipse(centroid[0], centroid[1], 20, 20)
   ellipse(pose.nose.x, pose.nose.y, 50,50);
+  stroke(240,255,255);
+  strokeWeight(1);
+  line(width/2, height, centroid[0], centroid[1]);
+  line(pose.nose.x, pose.nose.y, centroid[0], centroid[1]);
+  line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
 
   /* Draw balance points - Center of the line joining the wrist */
   drawBalancePoints(pose.leftWrist, pose.rightWrist, 'wrist');
@@ -419,7 +421,7 @@ function drawBalancePoints(left,right, position) {
   var tiltAngle = -angleDiff;
  
   noStroke();
-  fill(255);
+  fill(255*sin(abs(tiltAngle)),255*cos(abs(tiltAngle)),0);
 
   /* Draw triangle on top of canvas at balance point */
   var balancePointx = width/2 * (1 + sin(tiltAngle));
@@ -459,11 +461,10 @@ function updatePayloadJSONData(data) {
 
 // Drawing the reference grid
 function drawGrid() {
-  fill(255);
-  stroke(255);
+  stroke(211,211,211);
+  strokeWeight(0.5);
   line(420,0,420,900);
   line(840,0,840,900)
-  stroke(255);
   line(0,240,1280,240);
   line(0,480,1280,480);
   noFill();
