@@ -11,7 +11,7 @@ constructor() {
 show() {
     noStroke();
     fill(0,255,0);
-    ellipse(this.x,this.y, 10*weight,10*weight);
+    ellipse(this.x,this.y, 10*this.weight,10*this.weight);
 }
 
 update(x, y, weight) {

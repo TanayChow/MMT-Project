@@ -1,8 +1,10 @@
+
 var markers = [];
 var socket;
 var video;
 var poseNet;
 var pose;
+var balancepointsJSON = {};
 
 var soundEngine;
 // Sound variables
@@ -10,7 +12,11 @@ var drum;
 var perc;
 var synthA;
 var synthB;
-
+var synthState = {
+  ON: 1,
+  OFF: 0
+};
+var synthButtonPressedState;
 // UI elements
 var sliderRate;
 var sliderPan;
@@ -28,6 +34,7 @@ var checkboxAmplitudeAnim;
 var enablePose = false;
 var checkBoxPose;
 var checkBoxSynthToggle;
+var checkBoxSynthToggleButton;
 var particles = [];
 
 // Sound properties
@@ -72,8 +79,8 @@ function setup() {
 
   /* Initialise marker array */
   initMarkers();
-  intializeUI();
-  intializePosenet();
+  initializeUI();
+  initializePosenet();
   
   /* Intiailize socket to listen on port 3000 */
   socket = io.connect('http://localhost:3000');
@@ -93,7 +100,7 @@ function initMarkers() {
     }
 }
 
-function intializePosenet() {
+function initializePosenet() {
   let constraints = {
     video: {
       mandatory: {
@@ -150,10 +157,11 @@ function intializePosenet() {
   poseNet.on('pose', getPoses);
 }
 
-function intializeUI() {
+function initializeUI() {
   /* Initializing all the UI elements here */
 
-  /*checkBoxDrum = createCheckbox("Drum", false);
+  /*
+  checkBoxDrum = createCheckbox("Drum", false);
   checkBoxDrum.changed(checkBoxDrumChanged);
   sliderDrum = createSlider(0,1,0.5,0.01);
   checkBoxPerc = createCheckbox("Percussion", false);
@@ -164,29 +172,38 @@ function intializeUI() {
   sliderSynthA = createSlider(0,1,0.5,0.01);
   checkBoxLeadSynth = createCheckbox("Lead Synth", false);
   checkBoxLeadSynth.changed(checkBoxLeadSynthChanged);
-  sliderSynthB = createSlider(0,1,0.5,0.01);*/
+  sliderSynthB = createSlider(0,1,0.5,0.01);
+  */
   checkBoxPose = createCheckbox("Enable Pose Detection", true );
   checkBoxPose.changed(checkBoxPoseChanged);
   checkBoxPose.position(150,730);
-  checkBoxSynthToggle = createCheckbox("Toggle FM Synth", false);
-  checkBoxSynthToggle.changed(checkBoxFMSynthToggle);
 
+  /* Creating the synth toggle button and applying styling */
+  synthToggleButton = createButton("FM SYNTH");
+  synthToggleButton.style('background-color: #4CAF50; border-radius: 8px;color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block; font-size: 16px');
+  synthToggleButton.position(150,20);
+  synthToggleButton.mousePressed(synthButtonPressed);
+  synthButtonPressedState = synthState.OFF;  
+  
   /* UI Animation Checkboxes */
   checkBoxParticleAnim = createCheckbox("Show Particles", false);
-  /*checkboxFFTAnim = createCheckbox("Graphic EQ", false);
-  checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);*/
+  
+  /* FFT and Amplitude Animation visualisation */
+  /*
+  checkboxFFTAnim = createCheckbox("Graphic EQ", false);
+  checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);
+  */
 
 }
 
 function initializeSound() {
   /* Initializing Tone JS sound Engine*/
-
   soundEngine.initSound();
   soundEngine.initTone();
-  playButton.html("stop");
 }
 
 // Callbacks for checkbox selection events
+/*
 function checkBoxDrumChanged() {
   if (this.checked()) {
     console.log('Checking Drums!');
@@ -222,6 +239,7 @@ function checkBoxAmbientSynthChanged() {
     fft_synthA = undefined;
   }
 }
+
 function checkBoxLeadSynthChanged() {
   if (this.checked()) {
     fft_synthB = new p5.FFT(0, 64);
@@ -232,6 +250,9 @@ function checkBoxLeadSynthChanged() {
     fft_synthB = undefined;
   }
 }
+*/
+
+/* Callback to reset poseNet */
 function checkBoxPoseChanged() {
   if (this.checked()) {
     intializePosenet();
@@ -242,25 +263,38 @@ function checkBoxPoseChanged() {
   }
 }
 
-function checkBoxFMSynthToggle() {
-    // emit the state of the checkbox
-    socket.emit('synth', this.checked());
+/* Callback for snth button pressed event */ 
+function synthButtonPressed() {
+  if(synthButtonPressedState == synthState.OFF)
+  {
+    socket.emit('synth',synthState.ON);
+    synthToggleButton.style('background-color', '#f44336');
+    synthButtonPressedState = synthState.ON;
+  } else {
+    socket.emit('synth',synthState.OFF);
+    synthToggleButton.style('background-color', '#4CAF50');
+    synthButtonPressedState = synthState.OFF;
+  }
 }
 
+/* Clear all marker data */
 function clearMarkers() {
   for (let i = 0; i < markers.length; i++) {
     markers[i].clear();
   }
 }
 
-// Callback for posenet model load complete
+/* Callback for posenet model load complete */
 function modelLoaded() {
-  console.log("MODEL LOADED");
+  // console.log("MODEL LOADED");
   isModelLoaded = true;
 }
 
-// callback from posenet once pose data is received
+/* Callback from posenet once single pose data is received 
+   @parameter poses JSON object containing pose data of 17 key-points
+*/
 function getPoses(poses) {
+  // console.log("getPoses - ");
   if(poses.length > 0) {
     pose = poses[0].pose;
     for (let i = 0; i < pose.keypoints.length; i++) {
@@ -272,9 +306,10 @@ function getPoses(poses) {
   }
 }
 
+/* Primary draw function which draws graphics on canvas based on pose data recieved */
 function drawSkeleton() {
   // Points returned by Posenet are inverted along the 'x' direction due to mirroring
-  // Translating the points to represent correct the mirroring
+  // Translating the points to represent correct mirroring
   push();
   translate(video.width, 0);
   scale(-1,1);
@@ -284,33 +319,61 @@ function drawSkeleton() {
   filter(GRAY); 
   */
 
-  /*for (let i = 0; i < markers.length; i++) {
+  /* Loop - uncomment to show all the markers */
+  /*
+  for (let i = 0; i < markers.length; i++) {
     markers[i].show();
-  }*/
-  if(pose.leftEar.confidence > 0.5 && pose.rightEar.confidence > 0.5 && pose.leftShoulder.confidence > 0.5 
-    && pose.rightShoulder.confidence > 0.5)
-  {
-    drawLines();
   }
+  */
+
+  /* Condition to check the confidence scores of the relevant parts 
+     
+    Confidence threshold of 0.3 is used. This means that draw will happen only when 
+    poseNet is sure that the relevant keypoint is correct with > 30% probability 
+  */
+  if(pose.leftEar.confidence > 0.3 && pose.rightEar.confidence > 0.3
+    && pose.leftShoulder.confidence > 0.3 && pose.rightShoulder.confidence > 0.3 
+    && pose.leftWrist.confidence > 0.3 && pose.rightWrist.confidence > 0.3)
+    {
+      drawLines();
+    }
   pop();
 }
 
+/* Draw function for the displaying graphics on canvas */
 function drawLines() {
+  // console.log('drawLines');
   stroke(255,0,0);
-  line(pose.leftEar.x, pose.leftEar.y, pose.rightEar.x, pose.rightEar.y);
+  strokeWeight(2);
+  
   line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
-  line(pose.leftEar.x, pose.leftEar.y, pose.rightEar.x, pose.rightEar.y);
-  line(pose.leftShoulder.x, pose.leftShoulder.y, pose.rightShoulder.x, pose.rightShoulder.y);
-  //line(pose.leftHip.x, pose.leftHip.y, pose.rightHip.x, pose.rightHip.y);
-  //line(pose.leftKnee.x, pose.leftKnee.y, pose.rightKnee.x, pose.rightKnee.y);
-  drawGravityLines(pose.leftShoulder, pose.rightShoulder);
-  drawGravityLines(pose.leftEar, pose.rightEar);
-  drawCopLines(pose.leftKnee, pose.rightKnee);
+  var centroid = getCentroid();
+  line(width/2, height, centroid[0], centroid[1]);
+  ellipse(centroid[0], centroid[1], 20, 20)
+  ellipse(pose.nose.x, pose.nose.y, 50,50);
 
-  drawBalancePoints(pose.leftEar, pose.rightEar, 'head');
-  //drawBalancePoints(pose.leftShoulder, pose.rightShoulder);
-  //drawBalancePoints(pose.leftWrist, pose.rightWrist);
+  /* Draw balance points - Center of the line joining the wrist */
+  drawBalancePoints(pose.leftWrist, pose.rightWrist, 'wrist');
+
+  /* Add the wrist distance to payloadJSON*/
+  var payloadData = {};
+  payloadData['wristDistance'] = getDistance(pose.leftWrist, pose.rightWrist);
+  payloadData['leftWrist'] = pose.leftWrist;
+  payloadData['rightWrist'] = pose.rightWrist;
+  payloadData['cgTilt'] =   getCentroidTilt(centroid);
+  updatePayloadJSONData(payloadData);
+  
+  socket.emit('balance', JSON.stringify(balancepointsJSON));
+  // console.log(balancepointsJSON);
+  
+  /* Reset the JSON data*/
+  balancepointsJSON = {};
 }
+
+/*  Draw vertical lines from the midpoint of keypoints to the ground 
+    @params left - Left Keypoint
+    @params right - right Keypoint
+*/
 function drawGravityLines(left, right) {
   stroke(255,0,0);
   var midX = (left.x + right.x) / 2;
@@ -318,43 +381,84 @@ function drawGravityLines(left, right) {
   line(midX, midY , midX, height);
 }
 
-function drawCopLines(left, right) {
-  stroke(0,255,0);
-  line(left.x, left.y, left.x, height );
-  line(right.x, right.y, right.x, height );
+/* Determine the angle of the tile w.r.t the gravity perpendicular vector*/
+function getCentroidTilt(centroid) {
+  var v1 = createVector(centroid[0], centroid[1]);
+  var v2 = createVector(width/2, height);
+  var v3 = createVector(0, height);
+  var v4 = v2.sub(v1);
+  // left tilt is -ve , right tilt is +ve
+  var angleDiff = v4.angleBetween(v3);
+  // console.log('pointbal angle' + angleDiff);
+  return angleDiff;
 }
 
+/* Draw ellipse at the point with the position - These points are dynamic and depend
+   on the angle of the tilt 
+   left - left coordinates
+   right - right coordinates
+   position - string indicating the position of the marker   
+*/
 function drawBalancePoints(left,right, position) {
   var midpointx = (left.x + right.x) / 2;
   var midpointy = (left.y + right.y) / 2; 
+  
   var cVec = createVector(midpointx, midpointy);
-  var aVec = createVector(right.x, right.y);
+  var rVec = createVector(right.x, right.y);
+  var lVec = createVector(left.x, left.y);
+  var vecd =  lVec.sub(rVec);
   var m = (right.y - left.y) / (right.x - left.x);
-  var at = degrees(atan(radians(m)));
-  console.log(at);
-  var ratio = cVec.dist(aVec)*sin(at) / 5;
+  var angle = degrees(atan(radians(m)));
+  var angleDiff = vecd.angleBetween(createVector(width,0));
+  // angle & angleDiff are approximately equal
+  // angleDiff is more accurate but its value has opposite sign
+  // '-ve' angleDiff is used
+  // console.log(angled + ' --- ' + angle);
+  
+  // tiltAngle +ve if tilt towards left, -ve if tilt towards right 
+  var tiltAngle = -angleDiff;
+ 
   noStroke();
   fill(255);
-  //console.log(sin(at) + " " + cos(at) + " " + ratio);
-  var balance = {
-    angle: at,
-    position: position
-  };
-  
-  socket.emit('balance', JSON.stringify(balance));
-  for(var i=0; i < 5 ;i++) {
 
-    cVec.x+=ratio*cos(at);
-    cVec.y+=ratio*sin(at);
-    
-    //this.shoulderCenterVec.add(vel);
-    ellipse(cVec.x, cVec.y, 10,10);
+  /* Draw triangle on top of canvas at balance point */
+  var balancePointx = width/2 * (1 + sin(tiltAngle));
+  triangle(balancePointx, 0, balancePointx + 10, 20, balancePointx - 10, 20);
+  
+
+  var angleObject = {};
+  angleObject[position + 'Angle'] = tiltAngle;
+  updatePayloadJSONData(angleObject);
+
+  
+  var ratio = ((rVec.dist(cVec))*sin(tiltAngle)) / 3;
+  //console.log(sin(angle) + " " + cos(angle) + " " + ratio);
+  
+  /* Draw the balance points - more the tilt more the displacement from center*/
+  for(var i=1; i <= 3 ;i++) {
+    ellipse(cVec.x+i*ratio*cos(tiltAngle), cVec.y+i*ratio*sin(tiltAngle), 10,10);
   }
 }
+
+/* Function to get distance between 2 points*/
+function getDistance(point1, point2) {
+  var v1 = createVector(point1.x, point1.y);
+  var v2 = createVector(point2.x, point2.y);
+  return abs(v1.dist(v2))
+}
+
+/* Update the JSON payload 
+   JSON Structure:
+   {{ UPDATE FINAL JSON STRUCTURE HERE
+    
+   }}
+*/
+function updatePayloadJSONData(data) {
+  balancepointsJSON = Object.assign(balancepointsJSON, data);
+}
+
 // Drawing the reference grid
 function drawGrid() {
-
-
   fill(255);
   stroke(255);
   line(420,0,420,900);
@@ -365,6 +469,7 @@ function drawGrid() {
   noFill();
   ellipse(width/2, height/2, height, height);
   fill(255);
+  ellipse(width/2, height/2, 10,10);
   stroke(0);
   textSize(10);
 
@@ -529,12 +634,58 @@ function drawAnimation() {
     }
   }
 
+  /* This method determines the center point of the torso 
+     Calculated from the quadilateral formed by 
+     left shoulder - right shoulder - left hip - right hip
+  */
+function getCentroid() {
+  var diag1midpointx = (pose.leftShoulder.x + pose.rightHip.x) / 2;
+  var diag1midpointy = (pose.leftShoulder.y + pose.rightHip.y) / 2;
+  
+  var centroid1x = (2*diag1midpointx + pose.leftHip.x) / 3;
+  var centroid1y = (2*diag1midpointy + pose.leftHip.y) / 3;
+  var centroid2x = (2*diag1midpointx + pose.rightShoulder.x) / 3;
+  var centroid2y = (2*diag1midpointy + pose.rightShoulder.y) / 3;
+
+  var diag2midpointx = (pose.rightShoulder.x + pose.leftHip.x) / 2;
+  var diag2midpointy = (pose.rightShoulder.y + pose.leftHip.y) / 2;
+  
+  var centroid3x = (2*diag2midpointx + pose.leftShoulder.x) / 3;
+  var centroid3y = (2*diag2midpointy + pose.leftShoulder.y) / 3;
+  var centroid4x = (2*diag2midpointx + pose.rightHip.x) / 3;
+  var centroid4y = (2*diag2midpointy + pose.rightHip.y) / 3;
+
+  var centroid1 = [centroid1x, centroid1y];
+  var centroid2 = [centroid2x, centroid2y];
+  var centroid3 = [centroid3x, centroid3y];
+  var centroid4 = [centroid4x, centroid4y];
+  var quadCentroid = intersect_point(centroid1, centroid2, centroid3, centroid4);
+  return quadCentroid;
+}
+
+function intersect_point(point1, point2, point3, point4) {
+  const ua = ((point4[0] - point3[0]) * (point1[1] - point3[1]) - 
+            (point4[1] - point3[1]) * (point1[0] - point3[0])) /
+           ((point4[1] - point3[1]) * (point2[0] - point1[0]) - 
+            (point4[0] - point3[0]) * (point2[1] - point1[1]));
+ 
+ const ub = ((point2[0] - point1[0]) * (point1[1] - point3[1]) - 
+            (point2[1] - point1[1]) * (point1[0] - point3[0])) /
+           ((point4[1] - point3[1]) * (point2[0] - point1[0]) - 
+            (point4[0] - point3[0]) * (point2[1] - point1[1]));
+ 
+ const x = point1[0] + ua * (point2[0] - point1[0]);
+ const y = point1[1] + ua * (point2[1] - point1[1]);
+ 
+ return [x, y]
+}
+
 // Main draw() function loop
 function draw() {
   background(0);
   drawGrid();
 
-   drawAnimation();
+  drawAnimation();
   
   // sets the volume of the audio loops
   setVolume();
@@ -550,8 +701,6 @@ function draw() {
     if(checkBoxPose) {
       drawSkeleton();
     }
-  
   }
-
 }
 
