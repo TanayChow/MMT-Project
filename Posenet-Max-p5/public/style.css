@@ -1,0 +1,44 @@
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+    body {background-color:#04080F;}
+    sansserif {
+        font-family: Arial, Helvetica, sans-serif;
+      }
+    button {
+        width: 130px;
+        transition-duration: 0.4s;
+        cursor: pointer;
+        border-radius: 8px;
+        color: white;
+        padding: 10px 2px;
+        text-align: center;
+        text-decoration: none;
+        display: block; 
+      }
+    button:hover {
+        border-radius: 8px;
+        color: white;
+      }
+    input[type='range'] {
+      overflow: hidden;
+      width: 120px;
+      height: 15px;
+      -webkit-appearance: none;
+      background-color: #fff;
+      border-radius: 8px;
+      display: block;
+    }
+    input[type='range']::-webkit-slider-runnable-track {
+      height: 20px;
+      -webkit-appearance: none;
+      /*color: #13bba4;*/
+      padding-bottom: 10px;
+    }
+    input[type='range']::-webkit-slider-thumb {
+      width: 10px;
+      -webkit-appearance: none;
+      height: 20px;
+      cursor: pointer;
+      background: #e4dede;
+      /*box-shadow: -80px 0 0 80px #43e5f7;*/
+    }
+  }

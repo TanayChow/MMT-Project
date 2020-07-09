@@ -5,8 +5,10 @@ var video;
 var poseNet;
 var pose;
 var balancepointsJSON = {};
-
+var bg;
 var soundEngine;
+var tiltAngle = 0; 
+var cgTilt = 0;
 // Sound variables
 var drum;
 var perc;
@@ -16,7 +18,11 @@ var synthState = {
   ON: 1,
   OFF: 0
 };
-var synthButtonPressedState;
+var synth1State;
+var synth2State;
+var synth3State;
+var synth1ButtonPressedState;
+var synth2ButtonPressedState;
 // UI elements
 var sliderRate;
 var sliderPan;
@@ -55,6 +61,9 @@ function preload() {
   perc = loadSound("media/Perc.wav");
   synthA = loadSound("media/synthA.wav");
   synthB = loadSound("media/synthB.wav");
+  bg = loadImage('assets/vitman.png');
+  myFont = loadFont('assets/fonts/LandasansMedium-ALJ6m.otf');
+  myNumFont = loadFont('assets/fonts/JerseyM54-aLX9.ttf')
 }
 
 function setup() {
@@ -163,37 +172,83 @@ function initializeUI() {
   /*
   checkBoxDrum = createCheckbox("Drum", false);
   checkBoxDrum.changed(checkBoxDrumChanged);
-  sliderDrum = createSlider(0,1,0.5,0.01);
+  
   checkBoxPerc = createCheckbox("Percussion", false);
   checkBoxPerc.changed(checkBoxPercChanged);
-  sliderPerc = createSlider(0,1,0.5,0.01);
+  
   checkBoxAmbientSynth = createCheckbox("Ambient Synth", false);
   checkBoxAmbientSynth.changed(checkBoxAmbientSynthChanged);
-  sliderSynthA = createSlider(0,1,0.5,0.01);
+  
   checkBoxLeadSynth = createCheckbox("Lead Synth", false);
   checkBoxLeadSynth.changed(checkBoxLeadSynthChanged);
-  sliderSynthB = createSlider(0,1,0.5,0.01);
+  
   */
   checkBoxPose = createCheckbox("Enable Pose Detection", true );
   checkBoxPose.changed(checkBoxPoseChanged);
   checkBoxPose.position(150,730);
 
-  /* Creating the synth toggle button and applying styling */
-  synthToggleButton = createButton("PERCOLATE");
-  synthToggleButton.style('background-color: #4CAF50; border-radius: 8px;color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block; font-size: 16px');
-  synthToggleButton.position(150,20);
-  synthToggleButton.mousePressed(synthButtonPressed);
-  synthButtonPressedState = synthState.OFF;  
+  /* Creating the synth1 toggle button and applying styling */
+  synth1ToggleButton = createButton("");
+  synth1ToggleButton.class('fas fa-guitar fa-3x');
+  synth1ToggleButton.style('background-color: #595F72; ');
+  synth1ToggleButton.mousePressed(synth1ButtonPressed);
+  synth1ButtonPressedState = synthState.OFF;  
+
+  sliderDrum = createSlider(0,1,0.5,0.01);
+  sliderDrum.style('background : #595F72');
+
+  /* Creating the synth2 toggle button and applying styling */
+  synth2ToggleButton = createButton("");
+  synth2ToggleButton.class('fas fa-umbrella fa-3x');
+  synth2ToggleButton.style('background-color: #575D90;');
+
+  synth2ToggleButton.mousePressed(synth2ButtonPressed);
+  synth2ButtonPressedState = synthState.OFF;
+
+  sliderPerc = createSlider(0,1,0.5,0.01);
+  sliderPerc.style('background : #575D90');
+
+
+  /* Creating the synth3 toggle button and applying styling */
+  synth3ToggleButton = createButton("");
+  synth3ToggleButton.class('far fa-snowflake fa-3x');
+  synth3ToggleButton.style('background-color: #507DBC;');
+
+  synth3ToggleButton.mousePressed(synth2ButtonPressed);
+  synth3ButtonPressedState = synthState.OFF;
+
+  sliderSynthA = createSlider(0,1,0.5,0.01);
+  sliderSynthA.style('background : #507DBC');
+ //sliderPerc.position(0,40);
   
   /* UI Animation Checkboxes */
-  checkBoxParticleAnim = createCheckbox("Show Particles", false);
+  //checkBoxParticleAnim = createCheckbox("Show Particles", false);
   
   /* FFT and Amplitude Animation visualisation */
   /*
   checkboxFFTAnim = createCheckbox("Graphic EQ", false);
   checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);
   */
+ divLeftUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(300,300);
+ divLeftUp.style('background : #4D5057; border-radius: 50%');
+ divLeftUp.hide();
+ divLeftDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(300,300);
+ divLeftDown.style('background : #4D5057; border-radius: 50%');
+ divLeftDown.hide();
+ divRightUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(1200,300);
+ divRightUp.style('background : #4D5057; border-radius: 50%');
+ divRightUp.hide();
+ divRightDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(1200,300);
+ divRightDown.style('background : #4D5057; border-radius: 50%');
+ divRightDown.hide();
 
+
+ divCGLeft = createDiv('<i class="fas fa-chevron-circle-left fa-5x"></i>').position(400,300);
+ divCGLeft.style('background : #4D5057; border-radius: 50%');
+ divCGLeft.hide();
+ divCGRight = createDiv('<i class="fas fa-chevron-circle-right fa-5x"></i>').position(1100,300);
+ divCGRight.style('background : #4D5057; border-radius: 50%');
+ divCGRight.hide();
 }
 
 function initializeSound() {
@@ -264,18 +319,44 @@ function checkBoxPoseChanged() {
 }
 
 /* Callback for snth button pressed event */ 
-function synthButtonPressed() {
-  if(synthButtonPressedState == synthState.OFF)
+function synth1ButtonPressed() {
+  if(synth1ButtonPressedState == synthState.OFF)
   {
-    socket.emit('synth',synthState.ON);
-    synthToggleButton.style('background-color', '#f44336');
-    synthButtonPressedState = synthState.ON;
+    synth1ToggleButton.style('background-color', '#EE6055');
+    synth1ButtonPressedState = synthState.ON;
   } else {
-    socket.emit('synth',synthState.OFF);
-    synthToggleButton.style('background-color', '#4CAF50');
-    synthButtonPressedState = synthState.OFF;
+    synth1ToggleButton.style('background-color', '#595F72');
+    synth1ButtonPressedState = synthState.OFF;
   }
+  socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
 }
+
+/* Callback for snth button pressed event */ 
+function synth2ButtonPressed() {
+  if(synth2ButtonPressedState == synthState.OFF)
+  {
+    synth2ToggleButton.style('background-color', '#EE6055');
+    synth2ButtonPressedState = synthState.ON;
+  } else {
+    synth2ToggleButton.style('background-color', '#575D90');
+    synth2ButtonPressedState = synthState.OFF;
+  }
+  socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
+}
+
+/* Callback for snth button pressed event */ 
+function synth3ButtonPressed() {
+  if(synth3ButtonPressedState == synthState.OFF)
+  {
+    synth3ToggleButton.style('background-color', '##507DBC');
+    synth3ButtonPressedState = synthState.ON;
+  } else {
+    synth3ToggleButton.style('background-color', '#575D90');
+    synth3ButtonPressedState = synthState.OFF;
+  }
+  socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
+}
+
 
 /* Clear all marker data */
 function clearMarkers() {
@@ -338,6 +419,35 @@ function drawSkeleton() {
       drawLines();
     }
   pop();
+
+  t2 = text("TILT: " + tiltAngle.toFixed(2), 1100, 30);
+  t2 = text("CG: " + cgTilt.toFixed(2), 50, 30);
+  if(tiltAngle > 20) {
+    divLeftDown.show();
+    divRightUp.show();
+  } else {
+    divLeftDown.hide();
+    divRightUp.hide();
+  }
+  if(tiltAngle < -20) {
+    divLeftUp.show();
+    divRightDown.show();
+  } else {
+    divRightDown.hide();
+    divLeftUp.hide();
+  }
+  if(cgTilt > 10) {
+    divCGRight.show();
+    divCGLeft.hide();
+  } else {
+    divCGRight.hide();
+  }
+  if(cgTilt < -10) {
+    divCGLeft.show();
+    divCGRight.hide();
+  } else {
+    divCGLeft.hide();
+  }
 }
 
 /* Draw function for the displaying graphics on canvas */
@@ -345,24 +455,24 @@ function drawLines() {
   // console.log('drawLines');
 
   var centroid = getCentroid();
-  fill(28,128,128);
+  fill(252, 246, 177);
   ellipse(centroid[0], centroid[1], 20, 20)
   ellipse(pose.nose.x, pose.nose.y, 50,50);
-  stroke(240,255,255);
-  strokeWeight(1);
+  stroke(218, 227, 229);
+  strokeWeight(1.5);
   line(width/2, height, centroid[0], centroid[1]);
   line(pose.nose.x, pose.nose.y, centroid[0], centroid[1]);
   line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
 
   /* Draw balance points - Center of the line joining the wrist */
   drawBalancePoints(pose.leftWrist, pose.rightWrist, 'wrist');
-
+  cgTilt = getCentroidTilt(centroid)
   /* Add the wrist distance to payloadJSON*/
   var payloadData = {};
   payloadData['wristDistance'] = getDistance(pose.leftWrist, pose.rightWrist);
   payloadData['leftWrist'] = pose.leftWrist;
   payloadData['rightWrist'] = pose.rightWrist;
-  payloadData['cgTilt'] =   getCentroidTilt(centroid);
+  payloadData['cgTilt'] =  cgTilt ;
   updatePayloadJSONData(payloadData);
   
   socket.emit('balance', JSON.stringify(balancepointsJSON));
@@ -418,14 +528,14 @@ function drawBalancePoints(left,right, position) {
   // console.log(angled + ' --- ' + angle);
   
   // tiltAngle +ve if tilt towards left, -ve if tilt towards right 
-  var tiltAngle = -angleDiff;
- 
+  tiltAngle = -angleDiff;
+
   noStroke();
   fill(255*sin(abs(tiltAngle)),255*cos(abs(tiltAngle)),0);
 
   /* Draw triangle on top of canvas at balance point */
   var balancePointx = width/2 * (1 + sin(tiltAngle));
-  triangle(balancePointx, 0, balancePointx + 10, 20, balancePointx - 10, 20);
+  triangle(balancePointx, 0, balancePointx + 20, 40, balancePointx - 20, 40);
   
 
   var angleObject = {};
@@ -438,7 +548,7 @@ function drawBalancePoints(left,right, position) {
   
   /* Draw the balance points - more the tilt more the displacement from center*/
   for(var i=1; i <= 3 ;i++) {
-    ellipse(cVec.x+i*ratio*cos(tiltAngle), cVec.y+i*ratio*sin(tiltAngle), 10,10);
+    ellipse(cVec.x+i*ratio*cos(tiltAngle), cVec.y+i*ratio*sin(tiltAngle), 15,15);
   }
 }
 
@@ -472,13 +582,14 @@ function drawGrid() {
   fill(255);
   ellipse(width/2, height/2, 10,10);
   stroke(0);
-  textSize(10);
 
   if(!isModelLoaded) {
-    text('INTIALIZING', 0, 10);
+    t1 = text('INTIALIZING', 10, 700);
   } else {
-    text("READY ! FPS: " + frameRate().toFixed(2), 0, 10);
+    t1 = text("FPS: " + frameRate().toFixed(2), 50, 700);
   }
+  t1.textSize(30);
+  t1.textFont(myNumFont);
 }
 
 function fftAnim() {
@@ -567,18 +678,25 @@ function drawParticles() {
 
 // Set all volumes with current slider values
 function setVolume() {
+  var payloadData = {};
   if(sliderDrum) {
-    drum.setVolume(sliderDrum.value());
+    // drum.setVolume(sliderDrum.value());
+    payloadData['mixer1Vol'] = sliderDrum.value();
   }
   if(sliderPerc) {
-    perc.setVolume(sliderPerc.value());
+    // perc.setVolume(sliderPerc.value());
+    payloadData['mixer2Vol'] = sliderPerc.value();
   }
   if(sliderSynthA) {
-    synthA.setVolume(sliderSynthA.value());
+    // synthA.setVolume(sliderSynthA.value());
+    payloadData['mixer3Vol'] = sliderSynthA.value();
   }
   if(sliderSynthB) {
-    synthB.setVolume(sliderSynthB.value());
+    // synthB.setVolume(sliderSynthB.value());
+    payloadData['mixer4Vol'] =   sliderSynthB.value();  
   }
+  
+  updatePayloadJSONData(payloadData);
 }
 
 function playSounds() {

@@ -51,8 +51,8 @@ function newConnection(socket) {
         console.log('OSC message sent to ' + remoteIp + ':' + remotePort)
     }
 
-    function synthData(data) {
-        maxAPI.outlet(data);
+    function synthData(data1, data2, data3) {
+        maxAPI.outlet(['synth1' , data1, 'synth2', data2, 'synth3', data3]);
     }
 
     function balanceData(data) {
