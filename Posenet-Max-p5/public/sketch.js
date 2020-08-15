@@ -1,19 +1,16 @@
-
+// Primary data structures
 var markers = [];
 var socket;
 var video;
 var poseNet;
 var pose;
 var balancepointsJSON = {};
-var bg;
-var soundEngine;
+
+// Balance variables
 var tiltAngle = 0; 
 var cgTilt = 0;
+
 // Sound variables
-var drum;
-var perc;
-var synthA;
-var synthB;
 var synthState = {
   ON: 1,
   OFF: 0
@@ -23,85 +20,95 @@ var synth2State;
 var synth3State;
 var synth1ButtonPressedState;
 var synth2ButtonPressedState;
-// UI elements
-var sliderRate;
-var sliderPan;
-var checkBoxAmbientSynth;
-var checkBoxLeadSynth;
-var checkBoxDrum;
-var checkBoxPerc;
-var sliderDrum;
-var sliderPerc;
-var sliderSynthA;
-var sliderSynthB;
+
+// UI element variables
+var sliderMix1;
+var sliderMix2;
+var sliderMix3;
+var sliderMix4;
 var checkBoxParticleAnim;
 var checkboxFFTAnim;
 var checkboxAmplitudeAnim;
-var enablePose = false;
 var checkBoxPose;
 var checkBoxSynthToggle;
 var checkBoxSynthToggleButton;
-var particles = [];
+var orbitParticles = [];
+
+// flags
+var enablePose = false;
+var isModelLoaded = false;
 
 // Sound properties
 var amp;
 var ampHistory = [];
 var fft_drum;
-var fft_synthA;
-var fft_synthB;
-var fft_perc;
 var peakDetect;
-var isModelLoaded = false;
 var vel;
-
+var mic;
+// variables for cardioid animation
+let r;
+let factor = 0;
+// variables for flow animation
+let snow = [];
+let gravity;
+let zOff = 0;
 
 function preload() {
-  // Preload all media
-  drum = loadSound("media/Drum.wav");
-  perc = loadSound("media/Perc.wav");
-  synthA = loadSound("media/synthA.wav");
-  synthB = loadSound("media/synthB.wav");
-  bg = loadImage('assets/vitman.png');
+  // Preload fonts
   myFont = loadFont('assets/fonts/LandasansMedium-ALJ6m.otf');
   myNumFont = loadFont('assets/fonts/JerseyM54-aLX9.ttf')
 }
 
+/* --------------------------------------- SETUP AND INTIALIZATIONS START -----------------------------------------------------------*/
 function setup() {
+  /* Initialize canvas */
+
   let cnv = createCanvas(1280, 720);
+  r = height / 2 ;
   cnv.position(150,0);
   angleMode(DEGREES);
-  for(var i=0; i < 5; i++) {
-    particles.push(new Particle(createVector(random(width), random(height)),100,random(8), color(random(255), random(255),random(255)))); 
+
+  /* Orbit particles array created */
+  for(var i=0; i < 4; i++) {
+    orbitParticles.push(new OrbitParticle(random(width), random(height))); 
   }
+
   /* Initialize all sound property objects*/
-  amp = new p5.Amplitude();
+  //amp = new p5.Amplitude();
   peakDetect = new p5.PeakDetect(300,700); 
-  fft_drum = new p5.FFT(0, 64);
-  fft_drum.setInput(drum);
-  fft_perc = new p5.FFT(0, 64);
-  fft_perc.setInput(perc);
-  fft_synthA = new p5.FFT(0, 64);
-  fft_synthA.setInput(synthA);
-  fft_synthB = new p5.FFT(0, 64);
-  fft_synthB.setInput(synthB); 
-  soundEngine = new SoundClass();
+  fft_drum = new p5.FFT(0, 16);
+  mic = new p5.AudioIn();
+  mic.getSources().then((data)=> {
+    console.log(data);
+    mic.setSource(1);
+    mic.start();
+    userStartAudio();
+    fft_drum.setInput(mic);
+  })
 
   /* Initialise marker array */
   initMarkers();
+  /* Initialise UI elements */
   initializeUI();
+  /* Initialise video feed and posenet */
   initializePosenet();
-  
+  /* Initialize flow animation objects*/
+  setupSnow();
+
   /* Intiailize socket to listen on port 3000 */
   socket = io.connect('http://localhost:3000');
-  socket.on('counter', counterLog);
-
+  // socket.on('counter', counterLog);
 }
 
+/*
+// Callback to handle incoming data from MAX-MSP
 function counterLog(value) {
   //var obj = JSON.parse(value);
   console.log("recieved from max" + value);
 }
+*/
 
+/* Initialize markers */
 function initMarkers() {
     //intialize empty markers for 17 points
     for(let i = 0; i < 17; i++) {
@@ -109,6 +116,7 @@ function initMarkers() {
     }
 }
 
+/* Initialize posenet */
 function initializePosenet() {
   let constraints = {
     video: {
@@ -127,6 +135,8 @@ function initializePosenet() {
   //video = createCapture(VIDEO);
   video.hide();
   /* PoseNet initialization
+  Adapted from https://github.com/tensorflow/tfjs-models/tree/master/posenet
+
   architecture - Can be either MobileNetV1 or ResNet50.
   
   outputStride - Can be one of 8, 16, 32 (Stride 16, 32 are supported for the ResNet architecture and stride 8, 16, 32 
@@ -166,147 +176,96 @@ function initializePosenet() {
   poseNet.on('pose', getPoses);
 }
 
-function initializeUI() {
-  /* Initializing all the UI elements here */
-
-  /*
-  checkBoxDrum = createCheckbox("Drum", false);
-  checkBoxDrum.changed(checkBoxDrumChanged);
-  
-  checkBoxPerc = createCheckbox("Percussion", false);
-  checkBoxPerc.changed(checkBoxPercChanged);
-  
-  checkBoxAmbientSynth = createCheckbox("Ambient Synth", false);
-  checkBoxAmbientSynth.changed(checkBoxAmbientSynthChanged);
-  
-  checkBoxLeadSynth = createCheckbox("Lead Synth", false);
-  checkBoxLeadSynth.changed(checkBoxLeadSynthChanged);
-  
+  /* 
+    Initializing all the UI elements here 
+    Creates the buttons, checkboxes, sliders and indicator icons 
   */
+function initializeUI() {
+  /* create pose detection option checkbox */
   checkBoxPose = createCheckbox("Enable Pose Detection", true );
   checkBoxPose.changed(checkBoxPoseChanged);
   checkBoxPose.position(150,730);
 
   /* Creating the synth1 toggle button and applying styling */
   synth1ToggleButton = createButton("");
-  synth1ToggleButton.class('fas fa-guitar fa-3x');
+  synth1ToggleButton.class('fas fa-wind fa-3x');
   synth1ToggleButton.style('background-color: #595F72; ');
+  /* Creating the synth1 toggle button event handler */
   synth1ToggleButton.mousePressed(synth1ButtonPressed);
   synth1ButtonPressedState = synthState.OFF;  
-
-  sliderDrum = createSlider(0,1,0.5,0.01);
-  sliderDrum.style('background : #595F72');
+  /* Creating synth1 slider */
+  sliderMix1 = createSlider(0,1,0.5,0.01);
+  sliderMix1.style('background : #595F72');
 
   /* Creating the synth2 toggle button and applying styling */
   synth2ToggleButton = createButton("");
-  synth2ToggleButton.class('fas fa-umbrella fa-3x');
+  synth2ToggleButton.class('fas fa-water fa-3x');
   synth2ToggleButton.style('background-color: #575D90;');
-
+ /* Creating the synth2 toggle button event handler */
   synth2ToggleButton.mousePressed(synth2ButtonPressed);
   synth2ButtonPressedState = synthState.OFF;
-
-  sliderPerc = createSlider(0,1,0.5,0.01);
-  sliderPerc.style('background : #575D90');
+ /* Creating synth2 slider */
+  sliderMix2 = createSlider(0,1,0.5,0.01);
+  sliderMix2.style('background : #575D90');
 
 
   /* Creating the synth3 toggle button and applying styling */
   synth3ToggleButton = createButton("");
-  synth3ToggleButton.class('far fa-snowflake fa-3x');
+  synth3ToggleButton.class('fas fa-wave-square fa-3x');
   synth3ToggleButton.style('background-color: #507DBC;');
-
-  synth3ToggleButton.mousePressed(synth2ButtonPressed);
+ /* Creating the synth3 toggle button event handler */
+  synth3ToggleButton.mousePressed(synth3ButtonPressed);
   synth3ButtonPressedState = synthState.OFF;
-
-  sliderSynthA = createSlider(0,1,0.5,0.01);
-  sliderSynthA.style('background : #507DBC');
- //sliderPerc.position(0,40);
+ /* Creating synth3 slider */
+  sliderMix3 = createSlider(0,1,0.5,0.01);
+  sliderMix3.style('background : #507DBC');
   
   /* UI Animation Checkboxes */
   //checkBoxParticleAnim = createCheckbox("Show Particles", false);
   
   /* FFT and Amplitude Animation visualisation */
-  /*
-  checkboxFFTAnim = createCheckbox("Graphic EQ", false);
-  checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);
-  */
- divLeftUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(300,300);
- divLeftUp.style('background : #4D5057; border-radius: 50%');
- divLeftUp.hide();
- divLeftDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(300,300);
- divLeftDown.style('background : #4D5057; border-radius: 50%');
- divLeftDown.hide();
- divRightUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(1200,300);
- divRightUp.style('background : #4D5057; border-radius: 50%');
- divRightUp.hide();
- divRightDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(1200,300);
- divRightDown.style('background : #4D5057; border-radius: 50%');
- divRightDown.hide();
-
-
- divCGLeft = createDiv('<i class="fas fa-chevron-circle-left fa-5x"></i>').position(400,300);
- divCGLeft.style('background : #4D5057; border-radius: 50%');
- divCGLeft.hide();
- divCGRight = createDiv('<i class="fas fa-chevron-circle-right fa-5x"></i>').position(1100,300);
- divCGRight.style('background : #4D5057; border-radius: 50%');
- divCGRight.hide();
-}
-
-function initializeSound() {
-  /* Initializing Tone JS sound Engine*/
-  soundEngine.initSound();
-  soundEngine.initTone();
-}
-
-// Callbacks for checkbox selection events
-/*
-function checkBoxDrumChanged() {
-  if (this.checked()) {
-    console.log('Checking Drums!');
-    fft_drum = new p5.FFT(0, 64);
-    fft_drum.setInput(drum);
-    drum.loop();
+  /**/
+  checkboxFFTAnim = createCheckbox("Graphic EQ", false); 
+  // checkboxAmplitudeAnim = createCheckbox("Volume Graph", false);
  
-  } else {
-    console.log('Unchecking Drums!');
-    drum.stop();
-    fft_drum = undefined;
-  }
+  // Initialize the tilt balance indicator icons
+  divLeftUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(300,300);
+  divLeftUp.style('background : #4D5057; border-radius: 50%');
+  divLeftUp.hide();
+  divLeftDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(300,300);
+  divLeftDown.style('background : #4D5057; border-radius: 50%');
+  divLeftDown.hide();
+  divRightUp = createDiv('<i class="fas fa-arrow-circle-up fa-5x"></i>').position(1200,300);
+  divRightUp.style('background : #4D5057; border-radius: 50%');
+  divRightUp.hide();
+  divRightDown = createDiv('<i class="fas fa-arrow-circle-down fa-5x"></i>').position(1200,300);
+  divRightDown.style('background : #4D5057; border-radius: 50%');
+  divRightDown.hide();
+
+  // Initialize the CG balance indicator icons
+  divCGLeft = createDiv('<i class="fas fa-chevron-circle-left fa-5x"></i>').position(400,300);
+  divCGLeft.style('background : #4D5057; border-radius: 50%');
+  divCGLeft.hide();
+  divCGRight = createDiv('<i class="fas fa-chevron-circle-right fa-5x"></i>').position(1100,300);
+  divCGRight.style('background : #4D5057; border-radius: 50%');
+  divCGRight.hide();
+  
 }
-function checkBoxPercChanged() {
-  if (this.checked()) {
-    console.log('Checking Percussion!');
-    fft_perc = new p5.FFT(0, 64);
-    fft_perc.setInput(perc);
-    perc.loop();
-  } else {
-    console.log('Unchecking Percussion!');
-    perc.stop();
-    fft_perc = undefined;
-  }
-}
-function checkBoxAmbientSynthChanged() {
-  if (this.checked()) {
-    fft_synthA = new p5.FFT(0, 64);
-    fft_synthA.setInput(synthA);
-    synthA.loop();
-  } else {
-    synthA.stop();
-    fft_synthA = undefined;
+
+/* Setup for flow animation */
+function setupSnow() {
+  gravity = createVector(0, 0.3);
+
+  for (let i = 0; i < 150; i++) {
+    let x = random(width);
+    let y = random(height);
+    snow.push(new Snowflake(x, y));
   }
 }
 
-function checkBoxLeadSynthChanged() {
-  if (this.checked()) {
-    fft_synthB = new p5.FFT(0, 64);
-    fft_synthB.setInput(synthB);
-    synthB.loop();
-  } else {
-    synthB.stop();
-    fft_synthB = undefined;
-  }
-}
-*/
+/* --------------------------------------- SETUP AND INTIALIZATIONS END -----------------------------------------------------------*/
 
+/* --------------------------------------- EVENT HANDLERS AND CALLBACKS START -----------------------------------------------------------*/
 /* Callback to reset poseNet */
 function checkBoxPoseChanged() {
   if (this.checked()) {
@@ -318,7 +277,7 @@ function checkBoxPoseChanged() {
   }
 }
 
-/* Callback for snth button pressed event */ 
+/* Callback for synth 1 button pressed event */ 
 function synth1ButtonPressed() {
   if(synth1ButtonPressedState == synthState.OFF)
   {
@@ -331,7 +290,7 @@ function synth1ButtonPressed() {
   socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
 }
 
-/* Callback for snth button pressed event */ 
+/* Callback for synth 2 button pressed event */ 
 function synth2ButtonPressed() {
   if(synth2ButtonPressedState == synthState.OFF)
   {
@@ -344,19 +303,18 @@ function synth2ButtonPressed() {
   socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
 }
 
-/* Callback for snth button pressed event */ 
+/* Callback for synth 3 button pressed event */ 
 function synth3ButtonPressed() {
   if(synth3ButtonPressedState == synthState.OFF)
   {
-    synth3ToggleButton.style('background-color', '##507DBC');
+    synth3ToggleButton.style('background-color', '#EE6055');
     synth3ButtonPressedState = synthState.ON;
   } else {
-    synth3ToggleButton.style('background-color', '#575D90');
+    synth3ToggleButton.style('background-color', '#507DBC');
     synth3ButtonPressedState = synthState.OFF;
   }
   socket.emit('synth',synth1ButtonPressedState, synth2ButtonPressedState, synth3ButtonPressedState);
 }
-
 
 /* Clear all marker data */
 function clearMarkers() {
@@ -386,8 +344,35 @@ function getPoses(poses) {
     }
   }
 }
+/* --------------------------------------- EVENT HANDLERS AND CALLBACKS END -----------------------------------------------------------*/
 
-/* Primary draw function which draws graphics on canvas based on pose data recieved */
+/* --------------------------------------- DRAW UI ELEMENTS START -----------------------------------------------------------*/
+/* Function to draw the reference grid elements */
+function drawGrid() {
+  stroke(211,211,211);
+  strokeWeight(0.5);
+  line(420,0,420,900);
+  line(840,0,840,900)
+  line(0,240,1280,240);
+  line(0,480,1280,480);
+  noFill();
+  ellipse(width/2, height/2, height, height);
+  fill(255);
+  ellipse(width/2, height/2, 10,10);
+  stroke(0);
+
+  if(!isModelLoaded) {
+    t1 = text('INTIALIZING', 10, 700);
+  } else {
+    t1 = text("FPS: " + frameRate().toFixed(2), 50, 700);
+  }
+  t2 = text("TILT: " + tiltAngle.toFixed(2), 1100, 30);
+  t2 = text("CG: " + cgTilt.toFixed(2), 50, 30);
+  t1.textSize(30);
+  t1.textFont(myNumFont);
+}
+
+/* Function to draw graphics on canvas based on pose data recieved */
 function drawSkeleton() {
   // Points returned by Posenet are inverted along the 'x' direction due to mirroring
   // Translating the points to represent correct mirroring
@@ -407,21 +392,23 @@ function drawSkeleton() {
   }
   */
 
-  /* Condition to check the confidence scores of the relevant parts 
-     
+  /* 
+    Condition to check the confidence scores of the relevant parts 
     Confidence threshold of 0.3 is used. This means that draw will happen only when 
     poseNet is sure that the relevant keypoint is correct with > 30% probability 
   */
   if(pose.leftEar.confidence > 0.3 && pose.rightEar.confidence > 0.3
-    && pose.leftShoulder.confidence > 0.3 && pose.rightShoulder.confidence > 0.3 
-    && pose.leftWrist.confidence > 0.3 && pose.rightWrist.confidence > 0.3)
-    {
-      drawLines();
-    }
+      && pose.leftShoulder.confidence > 0.3 && pose.rightShoulder.confidence > 0.3 
+      && pose.leftWrist.confidence > 0.3 && pose.rightWrist.confidence > 0.3)
+      {
+        drawLines();
+      }
   pop();
 
-  t2 = text("TILT: " + tiltAngle.toFixed(2), 1100, 30);
-  t2 = text("CG: " + cgTilt.toFixed(2), 50, 30);
+  /* 
+    Conditional checks to display indicators
+    tiltAngle, cgTilt thresholds control indicator displays
+  */
   if(tiltAngle > 20) {
     divLeftDown.show();
     divRightUp.show();
@@ -450,24 +437,40 @@ function drawSkeleton() {
   }
 }
 
-/* Draw function for the displaying graphics on canvas */
+/* Draw function for the displaying pose graphics on canvas */
 function drawLines() {
   // console.log('drawLines');
 
   var centroid = getCentroid();
   fill(252, 246, 177);
-  ellipse(centroid[0], centroid[1], 20, 20)
+  //ellipse(centroid[0], centroid[1], 20, 20)
   ellipse(pose.nose.x, pose.nose.y, 50,50);
   stroke(218, 227, 229);
-  strokeWeight(1.5);
+  strokeWeight(1.5, .5);
+  /* 
+    Draw the pose - connector points 
+    CG line to centroid
+    CG to Face connector
+    Left Wrist - Right Wrist connector
+  */
   line(width/2, height, centroid[0], centroid[1]);
   line(pose.nose.x, pose.nose.y, centroid[0], centroid[1]);
   line(pose.leftWrist.x, pose.leftWrist.y, pose.rightWrist.x, pose.rightWrist.y);
 
+  /* Draw orbit particles - these particles move towards the specified coordinates with constant acceleration */
+  orbitParticles[0].update(pose.leftWrist.x, pose.leftWrist.y);
+  orbitParticles[1].update(pose.rightWrist.x, pose.rightWrist.y);
+  orbitParticles[2].update(centroid[0], centroid[1]);
+  orbitParticles[3].update(pose.nose.x, pose.nose.y);
+  orbitParticles[0].render();
+  orbitParticles[1].render();
+  orbitParticles[2].render();
+
   /* Draw balance points - Center of the line joining the wrist */
   drawBalancePoints(pose.leftWrist, pose.rightWrist, 'wrist');
   cgTilt = getCentroidTilt(centroid)
-  /* Add the wrist distance to payloadJSON*/
+  
+  /* Add the wrist distance to payload JSON*/
   var payloadData = {};
   payloadData['wristDistance'] = getDistance(pose.leftWrist, pose.rightWrist);
   payloadData['leftWrist'] = pose.leftWrist;
@@ -475,6 +478,7 @@ function drawLines() {
   payloadData['cgTilt'] =  cgTilt ;
   updatePayloadJSONData(payloadData);
   
+  /* Send JSON data (payload object) to server */
   socket.emit('balance', JSON.stringify(balancepointsJSON));
   // console.log(balancepointsJSON);
   
@@ -489,20 +493,8 @@ function drawLines() {
 function drawGravityLines(left, right) {
   stroke(255,0,0);
   var midX = (left.x + right.x) / 2;
-  var midY = (left.y + right.y) /2;
+  var midY = (left.y + right.y) / 2;
   line(midX, midY , midX, height);
-}
-
-/* Determine the angle of the tile w.r.t the gravity perpendicular vector*/
-function getCentroidTilt(centroid) {
-  var v1 = createVector(centroid[0], centroid[1]);
-  var v2 = createVector(width/2, height);
-  var v3 = createVector(0, height);
-  var v4 = v2.sub(v1);
-  // left tilt is -ve , right tilt is +ve
-  var angleDiff = v4.angleBetween(v3);
-  // console.log('pointbal angle' + angleDiff);
-  return angleDiff;
 }
 
 /* Draw ellipse at the point with the position - These points are dynamic and depend
@@ -531,228 +523,88 @@ function drawBalancePoints(left,right, position) {
   tiltAngle = -angleDiff;
 
   noStroke();
-  fill(255*sin(abs(tiltAngle)),255*cos(abs(tiltAngle)),0);
+  fill( 255 * sin(abs(tiltAngle)), 255 * cos(abs(tiltAngle)), 0);
 
   /* Draw triangle on top of canvas at balance point */
   var balancePointx = width/2 * (1 + sin(tiltAngle));
   triangle(balancePointx, 0, balancePointx + 20, 40, balancePointx - 20, 40);
   
-
+  /* Update JSON */
   var angleObject = {};
   angleObject[position + 'Angle'] = tiltAngle;
   updatePayloadJSONData(angleObject);
 
-  
-  var ratio = ((rVec.dist(cVec))*sin(tiltAngle)) / 3;
+  var ratio = ((rVec.dist(cVec)) * sin(tiltAngle)) / 3;
   //console.log(sin(angle) + " " + cos(angle) + " " + ratio);
   
-  /* Draw the balance points - more the tilt more the displacement from center*/
+  /* Draw the balance points - more the tilt - more the displacement from center */
   for(var i=1; i <= 3 ;i++) {
-    ellipse(cVec.x+i*ratio*cos(tiltAngle), cVec.y+i*ratio*sin(tiltAngle), 15,15);
+    ellipse(cVec.x + i * ratio * cos(tiltAngle), cVec.y + i * ratio * sin(tiltAngle), 15,15);
   }
 }
+/* --------------------------------------- DRAW UI ELEMENTS END-----------------------------------------------------------*/
 
-/* Function to get distance between 2 points*/
+/* --------------------------------------- UTILITY FUNCTIONS START -----------------------------------------------------------*/
+/* Helper function to get distance between 2 points */
 function getDistance(point1, point2) {
   var v1 = createVector(point1.x, point1.y);
   var v2 = createVector(point2.x, point2.y);
   return abs(v1.dist(v2))
 }
 
+/* Helper function to determine the angle of the tile w.r.t the gravity perpendicular vector */
+function getCentroidTilt(centroid) {
+  var v1 = createVector(centroid[0], centroid[1]);
+  var v2 = createVector(width / 2, height);
+  var v3 = createVector(0, height);
+  var v4 = v2.sub(v1);
+  // left tilt is -ve , right tilt is +ve
+  var angleDiff = v4.angleBetween(v3);
+  // console.log('pointbal angle' + angleDiff);
+  return angleDiff;
+}
+
 /* Update the JSON payload 
-   JSON Structure:
-   {{ UPDATE FINAL JSON STRUCTURE HERE
-    
+   SAMPLE JSON Structure:
+   {{ 
+    {
+    cgTilt: 45.74586843556536
+    leftWrist: {x: 1094.0910544590643, y: 399.41703216374265, confidence: 0.8458935618400574}
+    mixer1Vol: 0.5
+    mixer2Vol: 0.5
+    mixer3Vol: 0.5
+    rightWrist: {x: 1106.8632736354775, y: 390.3188961988303, confidence: 0.44771063327789307}
+    wristAngle: 144.5362880940947
+    wristDistance: 15.68137942677142
+    }
    }}
 */
 function updatePayloadJSONData(data) {
   balancepointsJSON = Object.assign(balancepointsJSON, data);
 }
 
-// Drawing the reference grid
-function drawGrid() {
-  stroke(211,211,211);
-  strokeWeight(0.5);
-  line(420,0,420,900);
-  line(840,0,840,900)
-  line(0,240,1280,240);
-  line(0,480,1280,480);
-  noFill();
-  ellipse(width/2, height/2, height, height);
-  fill(255);
-  ellipse(width/2, height/2, 10,10);
-  stroke(0);
-
-  if(!isModelLoaded) {
-    t1 = text('INTIALIZING', 10, 700);
-  } else {
-    t1 = text("FPS: " + frameRate().toFixed(2), 50, 700);
-  }
-  t1.textSize(30);
-  t1.textFont(myNumFont);
-}
-
-function fftAnim() {
-  // FFT animation is drawn using lines and along the length and width of the canvas
-  var w = width / 64;
-  var h = height / 64;
-  if(fft_drum) {
-    stroke(random(255),0,0);
-    fill(random(255),0,0);
-    var spec_drum = fft_drum.analyze();
-    peakDetect.update(fft_drum);
-    if(peakDetect.isDetected) {
-      // Detect peaks in amplitude and draw ellipse at the center of the screen 
-      // default setting at 0.5
-      ellipse(width/2,height/2,50,50);
-    }
-
-    for(var i = 0; i < spec_drum.length; i++) {
-      // scale the 'y' coordinate according to the FFT value 
-      var y = map(spec_drum[i], 0, 256, 0, 50);
-      // draw the line with the scaled height
-      line(i*w , height/2, i*w, height/2 - y);
-    }
-  }
-  if(fft_synthA) {
-    stroke(0,random(255),0);
-    fill(0,random(255),0);
-    var spec_synthA = fft_synthA.analyze();
-    for(var i = 0; i < spec_synthA.length; i++) {
-      var y = map(spec_synthA[i], 0, 256, 0, 50);
-      line(width / 2, i*h, width / 2 + y, i*h);
-    }
-  }
-  if(fft_synthB) {
-    stroke(0,random(255),0);
-    fill(0,0,random(255));
-    var spec_synthB = fft_synthB.analyze();
-    for(var i = 0; i < spec_synthB.length; i++) {
-      var y = map(spec_synthB[i], 0, 256, 0, 50);
-      line(width / 2, i*h, width / 2 - y, i*h);
-    }
-  }
-  if(fft_perc) {
-    stroke(0,0,random(255));
-    var spec_perc = fft_perc.analyze();
-    for(var i = 0; i < spec_perc.length; i++) {
-      var y = map(spec_perc[i], 0, 256, 0, 50);
-      line(i*w , height/2, i*w, height/2 + y);
-    }
-  }
-}
-
-function amplitudeAnim() {
-  noFill();
-  var amplitude = amp.getLevel();
-  var val = ampHistory.push(amplitude);
-  stroke(255);
-  push();
-  translate(width/2,height/2);
-  beginShape();
-  for(var i = 0; i < 360; i++) {
-    // draw points at different positions according to the angle 
-    // and the radius scaled according to the amplitude history.
-    var r = map(ampHistory[i],0,1,height/2-100,height/2 + 100);
-    var x = r * cos(i);
-    var y = r * sin(i);
-    vertex(x,y)
-  }
-  endShape();
-  pop();
-  if(ampHistory.length > 360) {
-    ampHistory.splice(0,1);
-  }
-}
-
-// Draw particles to screen
-function drawParticles() {
-  for(var i = 0; i < particles.length; i++) {
-    // map the values due to inverted canvas 
-    var mapped_x_left = map(pose.leftWrist.x, 0 , 1280, 1280, 0);
-    var mapped_x_right = map(pose.rightWrist.x, 0 , 1280, 1280, 0);
-    particles[i].update(particles, i, createVector(mapped_x_left,pose.leftWrist.y), createVector(mapped_x_right,pose.rightWrist.y));
-  }
-  noStroke();
-}
-
-// Set all volumes with current slider values
+/* Set all volumes with current slider values */
 function setVolume() {
   var payloadData = {};
-  if(sliderDrum) {
-    // drum.setVolume(sliderDrum.value());
-    payloadData['mixer1Vol'] = sliderDrum.value();
+  if(sliderMix1) {
+    payloadData['mixer1Vol'] = sliderMix1.value();
   }
-  if(sliderPerc) {
-    // perc.setVolume(sliderPerc.value());
-    payloadData['mixer2Vol'] = sliderPerc.value();
+  if(sliderMix2) {
+    payloadData['mixer2Vol'] = sliderMix2.value();
   }
-  if(sliderSynthA) {
-    // synthA.setVolume(sliderSynthA.value());
-    payloadData['mixer3Vol'] = sliderSynthA.value();
+  if(sliderMix3) {
+    payloadData['mixer3Vol'] = sliderMix3.value();
   }
-  if(sliderSynthB) {
-    // synthB.setVolume(sliderSynthB.value());
-    payloadData['mixer4Vol'] =   sliderSynthB.value();  
+  if(sliderMix4) {
+    payloadData['mixer4Vol'] =  sliderMix4.value();  
   }
-  
+  /* update JSON with current slider values */
   updatePayloadJSONData(payloadData);
 }
 
-function playSounds() {
-  /* play sounds based on positions of the markers
-    left and right wrist above midpoints height plays synths
-    shoulder left and right beyond the 1/3rd of width plays percussions
-  */
-  if(Math.floor(pose.rightWrist.y) < 360 && checkBoxAmbientSynth.checked()) {
-    if(!synthA.isPlaying()) {
-      synthA.play();
-    }
-  } else {
-    if(synthA.isPlaying()) {
-      synthA.stop();
-    }
-  }
-  if(Math.floor(pose.leftWrist.y) < 360 && checkBoxLeadSynth.checked()) {
-    if(!synthB.isPlaying()) {
-      synthB.play();
-    }
-  } else {
-    if(synthB.isPlaying()) {
-      synthB.stop();
-    }
-  }
-  if(Math.floor(pose.leftShoulder.x) > 840 && pose.leftShoulder.confidence > 0.5 && checkBoxPerc.checked()) {
-    if(!perc.isPlaying()) {
-      perc.play();
-    }
-  } else {
-    if(perc.isPlaying()) {
-      perc.stop();
-    }
-  }
-  if(Math.floor(pose.rightShoulder.x) < 420 && pose.rightShoulder.confidence > 0.5 && checkBoxDrum.checked()) {
-    if(!drum.isPlaying()) {
-      drum.play();
-    }
-  } else {
-    if(drum.isPlaying()) {
-      drum.stop();
-    }
-  }
-}
-function drawAnimation() {
-    if(checkboxAmplitudeAnim && checkboxAmplitudeAnim.checked()) {
-      amplitudeAnim();
-    }
-    if(checkboxFFTAnim && checkboxFFTAnim.checked()) {
-      fftAnim();
-    }
-    if(checkBoxParticleAnim && checkBoxParticleAnim.checked()) {
-      drawParticles();
-    }
-  }
+/* --------------------------------------- UTILITY FUNCTIONS END -----------------------------------------------------------*/
 
+/* --------------------------------------- CENTROID CALCULATIONS START-----------------------------------------------------------*/
   /* This method determines the center point of the torso 
      Calculated from the quadilateral formed by 
      left shoulder - right shoulder - left hip - right hip
@@ -782,6 +634,9 @@ function getCentroid() {
   return quadCentroid;
 }
 
+  /* 
+  This method determines the intersection point of line segments 
+  */
 function intersect_point(point1, point2, point3, point4) {
   const ua = ((point4[0] - point3[0]) * (point1[1] - point3[1]) - 
             (point4[1] - point3[1]) * (point1[0] - point3[0])) /
@@ -798,28 +653,168 @@ function intersect_point(point1, point2, point3, point4) {
  
  return [x, y]
 }
+/* --------------------------------------- CENTROID CALCULATIONS END-----------------------------------------------------------*/
+
+/* --------------------------------------- ANIMATIONS START--------------------------------------------------------------------*/
+  /* 
+  This method renders the Cardioid animation
+  Adapted from Daniel Shiffman https://github.com/CodingTrain/website/tree/master/CodingChallenges/CC_133_Times_Tables_Cardioid
+  */
+function drawCardioid() {
+  const total = 100;
+  // Map increment factor of the times table to the distance between wrists
+  let factorinc = map(getDistance(pose.leftWrist, pose.rightWrist), 20, 500, 0.001, 0.015);
+  factor += factorinc;
+  if(factor == 100) {
+    factor =0;
+  }
+  push();
+  translate(width / 2, height / 2);
+  stroke(211,211,211);
+  strokeWeight(.5);
+  noFill();
+  ellipse(0, 0, r * 2);
+
+  strokeWeight(0.5);
+  for (let i = 0; i < total; i++) {
+    const a = getVector(i, total);
+    const b = getVector(i * factor, total);
+    line(a.x, a.y, b.x, b.y);
+  }
+  pop();
+}
+
+/* 
+Helper function for drawCardioid()
+*/
+function getVector(index, total) {
+  const angle = map(index % total, 0, total, 0, TWO_PI);
+  const v = p5.Vector.fromAngle(angle + PI);
+  v.mult(r);
+  return v;
+}
+
+/* 
+This method renders the flow animation
+*/
+function drawFlakes() {
+  zOff += 0.1;
+  // wind flow vector magnitude mapped to cgTilt value
+  let k = map(cgTilt, 0, 50, 0.01, .5);
+  for (flake of snow) {
+    let xOff = flake.pos.x / width;
+    let yOff = flake.pos.y / height;
+    let wAngle = noise(xOff, yOff, zOff) * TWO_PI;
+    let wind = p5.Vector.fromAngle(wAngle);
+    wind.mult(-k);
+
+    flake.applyForce(gravity);
+    flake.applyForce(wind);
+    flake.update();
+    flake.render();
+  }
+}
+
+/* Draw function for animations */
+function drawAnimation() {
+  if(checkboxAmplitudeAnim && checkboxAmplitudeAnim.checked()) {
+    amplitudeAnim();
+  }
+  if(checkboxFFTAnim && checkboxFFTAnim.checked()) {
+    fftAnim();
+  }
+  if(checkBoxParticleAnim && checkBoxParticleAnim.checked()) {
+    drawParticles();
+  }
+}
+
+function fftAnim() {
+  // FFT animation is drawn using lines and along the length and width of the canvas
+  var w = width / 16;
+  var h = height / 16;
+  if(fft_drum) {
+    //stroke(random(255),0,0);
+    fill(0,255,0);
+    var spec_drum = fft_drum.analyze();
+    console.log(spec_drum);
+    peakDetect.update(fft_drum);
+    if(peakDetect.isDetected) {
+      // Detect peaks in amplitude and draw ellipse at the center of the screen 
+      // default setting at 0.5
+      ellipse(width / 2,height / 2, 50, 50);
+    }
+    push();
+    translate(width / 2 - 160, height / 2);
+    scale(1,-1);
+    for(var i = 0; i < spec_drum.length; i++) {
+      // scale the 'y' coordinate according to the FFT value 
+      var y = map(spec_drum[i], 0, 256, 0, 50);
+      // draw the line with the scaled height
+      rect( i * 20 , 0, 20, y);
+    }
+    pop();
+    let waveform = fft_drum.waveform();
+    noFill();
+    beginShape();
+
+    for (let i = 0; i < waveform.length; i++){
+      let x = map(i, 0, waveform.length, 0, width);
+      let y = map( waveform[i], -1, 1, 0, height);
+      vertex(x,y);
+    }
+    endShape();
+  }
+}
+
+/*function amplitudeAnim() {
+  noFill();
+  var amplitude = amp.getLevel();
+  var val = ampHistory.push(amplitude);
+  stroke(255);
+  push();
+  translate(width/2,height/2);
+  beginShape();
+  for(var i = 0; i < 360; i++) {
+    // draw points at different positions according to the angle 
+    // and the radius scaled according to the amplitude history.
+    var r = map(ampHistory[i],0,1,height/2-100,height/2 + 100);
+    var x = r * cos(i);
+    var y = r * sin(i);
+    vertex(x,y)
+  }
+  endShape();
+  pop();
+  if(ampHistory.length > 360) {
+    ampHistory.splice(0,1);
+  }
+}*/
+
+// Draw particles to screen
+function drawParticles() {
+// Empty Function
+}
+/* --------------------------------------- ANIMATIONS END--------------------------------------------------------------------*/
+
+/* --------------------------------------- DRAW LOOP --------------------------------------------------------------------*/
 
 // Main draw() function loop
 function draw() {
   background(0);
   drawGrid();
-
-  drawAnimation();
-  
-  // sets the volume of the audio loops
   setVolume();
+  // drawAnimation();
   
   if(pose) {
     // Process only if pose data is available
     // console.log(pose);
-    
-    //socket.emit('pose', JSON.stringify(pose));
-  
-    // playSounds();
 
+    drawCardioid();
+    //drawFlakes();
     if(checkBoxPose) {
       drawSkeleton();
+
     }
   }
+  //console.log(getAudioContext().state);
 }
 
