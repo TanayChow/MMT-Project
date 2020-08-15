@@ -1,5 +1,5 @@
-# MMT-Project
-This is a project for MMT Thesis preparation
+# Music and Media Technologies - Thesis Project
+B-Audio
 An interactive interface designed for contactless full-body interaction with audio and video in a web browser. 
 
 Embodied design methodologies are applied to conceptualize and develop a system for live audio-visual interaction. 
