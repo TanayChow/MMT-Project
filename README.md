@@ -13,6 +13,9 @@ An express server was used to communicate with the webpage and send data to MAX-
 # Node for MAX
 Nodejs and MAX were connected using Node for MAX
 
+# Poster
+A poster which presents the abstract and concise description of the methodology and findings of the project.
+![Project Poster](https://github.com/TanayChow/MMT-Project/blob/master/stream_poster_revised-Tanay_Chowdhury%20(1).jpg?raw=true)
 # Demo 
 This [video presentation](https://youtu.be/ZdYopVIa_oE) shows an overview of the design and demonstration of the system
 
