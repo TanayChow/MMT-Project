@@ -14,5 +14,5 @@ An express server was used to communicate with the webpage and send data to MAX-
 Nodejs and MAX were connected using Node for MAX
 
 # Demo 
-The following link shows an overview of the design and demos of the system
-https://youtu.be/ZdYopVIa_oE
+This [video presentation](https://youtu.be/ZdYopVIa_oE) shows an overview of the design and demonstration of the system
+
